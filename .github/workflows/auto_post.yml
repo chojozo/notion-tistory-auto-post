@@ -1,0 +1,36 @@
+name: Notion to Tistory Auto Post
+
+on:
+  schedule:
+    # 매일 KST 11:00 = UTC 02:00
+    - cron: "0 2 * * *"
+  workflow_dispatch: # 수동 실행 허용
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run agent
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          TISTORY_EMAIL: ${{ secrets.TISTORY_EMAIL }}
+          TISTORY_PASSWORD: ${{ secrets.TISTORY_PASSWORD }}
+          TISTORY_BLOG_NAME: ${{ secrets.TISTORY_BLOG_NAME }}
+        run: python notion_tistory_agent.py
