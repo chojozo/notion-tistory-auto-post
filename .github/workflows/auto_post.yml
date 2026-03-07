@@ -33,4 +33,5 @@ jobs:
           TISTORY_EMAIL: ${{ secrets.TISTORY_EMAIL }}
           TISTORY_PASSWORD: ${{ secrets.TISTORY_PASSWORD }}
           TISTORY_BLOG_NAME: ${{ secrets.TISTORY_BLOG_NAME }}
+          TISTORY_COOKIES: ${{ secrets.TISTORY_COOKIES }}
         run: python notion_tistory_agent.py

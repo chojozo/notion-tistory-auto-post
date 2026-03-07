@@ -1,6 +1,7 @@
-# 환경 변수 (절대 커밋 금지)
+# 환경 변수 및 인증 정보 (절대 커밋 금지)
 .env
 *.env
+tistory_cookies.json
 
 # Python
 __pycache__/

@@ -140,25 +140,38 @@ def blocks_to_html(blocks: list[dict]) -> str:
 # 티스토리 (Playwright)
 # ──────────────────────────────────────────
 
-def login_tistory(page):
-    """카카오 계정으로 티스토리 로그인"""
-    page.goto("https://www.tistory.com/auth/login", wait_until="networkidle")
+def login_tistory(context, page):
+    """티스토리 로그인 — 쿠키 우선, 없으면 카카오 ID/PW 로그인"""
+    # ── 방법 1: 저장된 쿠키 사용 (GitHub Actions 환경)
+    cookies_json = os.environ.get("TISTORY_COOKIES", "")
+    if cookies_json:
+        import json
+        cookies = json.loads(cookies_json)
+        context.add_cookies(cookies)
+        page.goto("https://www.tistory.com", wait_until="networkidle")
+        if "tistory.com" in page.url and "auth/login" not in page.url:
+            print("  티스토리 로그인 완료 (쿠키)")
+            return
+        print("  쿠키 만료됨 — ID/PW 로그인으로 전환")
 
-    # 카카오 로그인 버튼 클릭
+    # ── 방법 2: 카카오 ID/PW 로그인 (로컬 환경)
+    page.goto("https://www.tistory.com/auth/login", wait_until="networkidle")
     page.click('a.btn_login.link_kakao_id')
     page.wait_for_load_state("networkidle")
-
-    # 카카오 로그인 폼 입력
     page.fill('#loginId--1', TISTORY_EMAIL)
     page.fill('#password--2', TISTORY_PASSWORD)
     page.click('.btn_g.highlight.submit')
+
+    try:
+        page.wait_for_url("*tistory.com*", timeout=30000)
+    except Exception:
+        pass
     page.wait_for_load_state("networkidle")
 
-    # 로그인 성공 확인 (티스토리 메인으로 리다이렉트)
     if "tistory.com" not in page.url or "auth/login" in page.url:
         raise RuntimeError(f"로그인 실패. 현재 URL: {page.url}")
 
-    print("  티스토리 로그인 완료")
+    print("  티스토리 로그인 완료 (ID/PW)")
 
 
 def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
@@ -322,7 +335,7 @@ def main():
         page = context.new_page()
 
         try:
-            login_tistory(page)
+            login_tistory(context, page)
         except Exception as e:
             print(f"  로그인 실패: {e}")
             browser.close()
