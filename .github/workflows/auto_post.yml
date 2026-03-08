@@ -34,4 +34,13 @@ jobs:
           TISTORY_PASSWORD: ${{ secrets.TISTORY_PASSWORD }}
           TISTORY_BLOG_NAME: ${{ secrets.TISTORY_BLOG_NAME }}
           TISTORY_COOKIES: ${{ secrets.TISTORY_COOKIES }}
-        run: python notion_tistory_agent.py
+          PYTHONUNBUFFERED: "1"
+        run: python -u notion_tistory_agent.py
+
+      - name: Upload debug screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-debug-screenshot
+          path: editor_debug.png
+          if-no-files-found: ignore

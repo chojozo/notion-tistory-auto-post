@@ -180,6 +180,11 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     page.goto(write_url, wait_until="networkidle")
     time.sleep(5)
 
+    # ── 디버그: 현재 URL과 스크린샷 저장
+    print(f"    [DEBUG] 에디터 페이지 URL: {page.url}")
+    page.screenshot(path="editor_debug.png")
+    print(f"    [DEBUG] 스크린샷 저장됨: editor_debug.png")
+
     # ── 에디터 로드 대기 (#category-btn 기준)
     page.locator('#category-btn').wait_for(state="visible", timeout=30000)
 
