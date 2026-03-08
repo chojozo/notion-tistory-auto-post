@@ -304,38 +304,39 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     done_btn.click()
     time.sleep(8)  # 패널 애니메이션 대기
 
-    # ── 발행 설정 패널: JavaScript로 직접 클릭 (visibility 무관)
-    pub_result = page.evaluate("""
-        () => {
-            const open20 = document.querySelector('#open20');
-            if (open20) open20.click();
-            const publishBtn = document.querySelector('#publish-btn');
-            if (publishBtn) { publishBtn.click(); return 'publish-btn clicked'; }
-            const allBtns = Array.from(document.querySelectorAll('button'));
-            const target = allBtns.find(b => ['발행','공개발행','게시'].some(t => b.textContent.includes(t)));
-            if (target) { target.click(); return 'btn: ' + target.textContent.trim(); }
-            return 'not found | ' + allBtns.slice(0, 15).map(b => b.textContent.trim()).filter(t => t).join(' | ');
-        }
-    """)
+    # ── 발행 패널: 모든 frame 탐색 + JavaScript 직접 클릭
+    pub_result = "not found"
+    for frame in page.frames:
+        try:
+            result = frame.evaluate("""
+                () => {
+                    const open20 = document.querySelector('#open20');
+                    if (open20) open20.click();
+                    const publishBtn = document.querySelector('#publish-btn');
+                    if (publishBtn) { publishBtn.click(); return 'publish-btn clicked'; }
+                    const allBtns = Array.from(document.querySelectorAll('button'));
+                    const target = allBtns.find(b => ['발행','공개발행','게시'].some(t => b.textContent.includes(t)));
+                    if (target) { target.click(); return 'btn: ' + target.textContent.trim(); }
+                    return null;
+                }
+            """)
+            if result:
+                pub_result = result
+                break
+        except Exception:
+            continue
     print(f"    발행 결과: {pub_result}")
-    time.sleep(3)
+    time.sleep(5)
 
     # ── 게시된 URL 추출
     current_url = page.url
-    if "manage/post" not in current_url:
+    print(f"    현재 URL: {current_url}")
+    # manage/newpost 또는 manage/post 에 머물러 있으면 발행 실패
+    if "/manage/" not in current_url:
         return current_url
 
-    # 발행 후 URL이 관리 페이지면 포스트 URL 탐색
-    try:
-        post_url = page.evaluate("""
-            (() => {
-                const a = document.querySelector('a[href*="tistory.com"]:not([href*="manage"])');
-                return a ? a.href : window.location.href;
-            })()
-        """)
-        return post_url
-    except Exception:
-        return current_url
+    # 여전히 관리 페이지 → 발행 실패
+    raise RuntimeError(f"발행 후에도 관리 페이지에 머물러 있음: {current_url}")
 
 
 # ──────────────────────────────────────────
