@@ -302,29 +302,22 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     done_btn = page.locator('button:has-text("완료")').last
     done_btn.wait_for(state="visible", timeout=10000)
     done_btn.click()
-    time.sleep(3)
+    time.sleep(8)  # 패널 애니메이션 대기
 
-    # ── 발행 설정 패널: 공개 선택 후 발행
-    try:
-        open_btn = page.locator('#open20')
-        open_btn.wait_for(state="visible", timeout=10000)
-        open_btn.click()
-        time.sleep(0.5)
-    except Exception:
-        # #open20 없으면 공개 라디오를 다른 방법으로 시도
-        try:
-            page.locator('input[type="radio"][value="20"]').click()
-            time.sleep(0.5)
-        except Exception:
-            pass  # 기본값이 공개일 수 있으므로 무시
-
-    # 발행 버튼 클릭
-    try:
-        pub_btn = page.locator('#publish-btn')
-        pub_btn.wait_for(state="visible", timeout=10000)
-        pub_btn.click()
-    except Exception:
-        page.locator('button:has-text("발행"), button:has-text("공개발행"), button:has-text("게시")').first.click()
+    # ── 발행 설정 패널: JavaScript로 직접 클릭 (visibility 무관)
+    pub_result = page.evaluate("""
+        () => {
+            const open20 = document.querySelector('#open20');
+            if (open20) open20.click();
+            const publishBtn = document.querySelector('#publish-btn');
+            if (publishBtn) { publishBtn.click(); return 'publish-btn clicked'; }
+            const allBtns = Array.from(document.querySelectorAll('button'));
+            const target = allBtns.find(b => ['발행','공개발행','게시'].some(t => b.textContent.includes(t)));
+            if (target) { target.click(); return 'btn: ' + target.textContent.trim(); }
+            return 'not found | ' + allBtns.slice(0, 15).map(b => b.textContent.trim()).filter(t => t).join(' | ');
+        }
+    """)
+    print(f"    발행 결과: {pub_result}")
     time.sleep(3)
 
     # ── 게시된 URL 추출
