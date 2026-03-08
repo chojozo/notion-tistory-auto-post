@@ -308,13 +308,45 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
         except Exception:
             pass
 
-    # ── "완료" 버튼 클릭 (티스토리 새 에디터)
-    done_btn = page.locator('button:has-text("완료")').last
-    done_btn.wait_for(state="visible", timeout=10000)
-    done_btn.click()
-    time.sleep(8)  # 패널 애니메이션 대기
+    # ── 현재 페이지 버튼 목록 출력 (디버그)
+    try:
+        all_btns = page.evaluate("""
+            () => Array.from(document.querySelectorAll('button'))
+                       .map(b => b.textContent.trim()).filter(t => t).slice(0, 20)
+        """)
+        print(f"    [버튼목록] {all_btns}")
+    except Exception:
+        pass
 
-    # ── 발행 패널: 모든 frame 탐색 + JavaScript 직접 클릭
+    # ── 발행하기 버튼 직접 클릭 (완료 버튼 우회)
+    publish_clicked = False
+
+    # 방법 1: "발행하기" 버튼 (상단 툴바)
+    for btn_text in ["발행하기", "발행", "공개발행"]:
+        try:
+            btn = page.locator(f'button:has-text("{btn_text}")')
+            if btn.count() > 0:
+                btn.first.click()
+                print(f"    '{btn_text}' 버튼 클릭")
+                publish_clicked = True
+                time.sleep(5)
+                break
+        except Exception:
+            continue
+
+    # 방법 2: "완료" → 패널 대기
+    if not publish_clicked:
+        try:
+            done_btn = page.locator('button:has-text("완료")').last
+            done_btn.wait_for(state="visible", timeout=10000)
+            done_btn.click()
+            print("    '완료' 버튼 클릭")
+            time.sleep(8)
+            publish_clicked = True
+        except Exception:
+            pass
+
+    # ── 발행 패널 처리: 모든 frame 탐색
     pub_result = "not found"
     for frame in page.frames:
         try:
@@ -325,7 +357,9 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
                     const publishBtn = document.querySelector('#publish-btn');
                     if (publishBtn) { publishBtn.click(); return 'publish-btn clicked'; }
                     const allBtns = Array.from(document.querySelectorAll('button'));
-                    const target = allBtns.find(b => ['발행','공개발행','게시'].some(t => b.textContent.includes(t)));
+                    const target = allBtns.find(b =>
+                        ['발행','공개발행','게시'].some(t => b.textContent.trim() === t)
+                    );
                     if (target) { target.click(); return 'btn: ' + target.textContent.trim(); }
                     return null;
                 }
@@ -338,14 +372,12 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     print(f"    발행 결과: {pub_result}")
     time.sleep(5)
 
-    # ── 게시된 URL 추출
+    # ── 게시된 URL 확인
     current_url = page.url
     print(f"    현재 URL: {current_url}")
-    # manage/newpost 또는 manage/post 에 머물러 있으면 발행 실패
     if "/manage/" not in current_url:
         return current_url
 
-    # 여전히 관리 페이지 → 발행 실패
     raise RuntimeError(f"발행 후에도 관리 페이지에 머물러 있음: {current_url}")
 
 
