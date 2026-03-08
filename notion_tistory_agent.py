@@ -193,28 +193,22 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     # ── 에디터 로드 대기 (#category-btn 기준)
     page.locator('#category-btn').wait_for(state="visible", timeout=30000)
 
-    # ── 제목 입력
-    title_injected = False
-    for frame in page.frames:
-        try:
-            el = frame.locator('[contenteditable="true"]').first
-            if el.count() > 0:
-                el.wait_for(state="visible", timeout=5000)
-                el.click()
-                el.fill(title)
-                title_injected = True
-                break
-        except Exception:
-            continue
-    if not title_injected:
-        page.evaluate(f"""
-            const el = document.querySelector('[contenteditable="true"]');
-            if (el) {{
-                el.focus();
-                el.textContent = {repr(title)};
-                el.dispatchEvent(new Event('input', {{bubbles: true}}));
-            }}
-        """)
+    # ── 제목 입력 (메인 프레임의 title 전용 contenteditable)
+    title_set = page.evaluate(f"""
+        () => {{
+            // 제목 placeholder로 타겟 정확히 지정
+            const el = document.querySelector('[placeholder="제목을 입력하세요"]')
+                    || document.querySelector('.title-input [contenteditable]')
+                    || document.querySelector('[contenteditable="true"]');
+            if (!el) return false;
+            el.focus();
+            el.textContent = {repr(title)};
+            el.dispatchEvent(new Event('input', {{bubbles: true}}));
+            el.dispatchEvent(new Event('change', {{bubbles: true}}));
+            return true;
+        }}
+    """)
+    print(f"    제목 입력: {title_set}")
 
     # ── 카테고리 선택 (AI트렌드)
     try:
