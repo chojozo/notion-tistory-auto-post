@@ -180,15 +180,15 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     page.goto(write_url, wait_until="networkidle")
     time.sleep(5)
 
-    # ── "이전 글 이어쓰기" 팝업 처리 (draft 복구 다이얼로그)
+    # ── "이전 글 이어쓰기" 팝업 처리: 취소 클릭으로 새 글 시작
     try:
-        new_btn = page.locator('button:has-text("새 글"), button:has-text("새글"), button:has-text("새로 쓰기"), button:has-text("취소")')
-        if new_btn.count() > 0:
-            new_btn.first.click()
-            print("    이어쓰기 팝업 닫음")
-            time.sleep(2)
+        cancel_btn = page.locator('button:has-text("취소")')
+        cancel_btn.wait_for(state="visible", timeout=8000)
+        cancel_btn.click()
+        print("    임시저장 팝업 닫음 (취소)")
+        time.sleep(2)
     except Exception:
-        pass
+        pass  # 팝업 없으면 그냥 진행
 
     # ── 에디터 로드 대기 (#category-btn 기준)
     page.locator('#category-btn').wait_for(state="visible", timeout=30000)
@@ -308,43 +308,12 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
         except Exception:
             pass
 
-    # ── 현재 페이지 버튼 목록 출력 (디버그)
-    try:
-        all_btns = page.evaluate("""
-            () => Array.from(document.querySelectorAll('button'))
-                       .map(b => b.textContent.trim()).filter(t => t).slice(0, 20)
-        """)
-        print(f"    [버튼목록] {all_btns}")
-    except Exception:
-        pass
-
-    # ── 발행하기 버튼 직접 클릭 (완료 버튼 우회)
-    publish_clicked = False
-
-    # 방법 1: "발행하기" 버튼 (상단 툴바)
-    for btn_text in ["발행하기", "발행", "공개발행"]:
-        try:
-            btn = page.locator(f'button:has-text("{btn_text}")')
-            if btn.count() > 0:
-                btn.first.click()
-                print(f"    '{btn_text}' 버튼 클릭")
-                publish_clicked = True
-                time.sleep(5)
-                break
-        except Exception:
-            continue
-
-    # 방법 2: "완료" → 패널 대기
-    if not publish_clicked:
-        try:
-            done_btn = page.locator('button:has-text("완료")').last
-            done_btn.wait_for(state="visible", timeout=10000)
-            done_btn.click()
-            print("    '완료' 버튼 클릭")
-            time.sleep(8)
-            publish_clicked = True
-        except Exception:
-            pass
+    # ── "완료" 버튼 클릭 → 발행 패널 열기
+    done_btn = page.locator('button:has-text("완료")').last
+    done_btn.wait_for(state="visible", timeout=10000)
+    done_btn.click()
+    print("    '완료' 버튼 클릭")
+    time.sleep(5)
 
     # ── 발행 패널 처리: 모든 frame 탐색
     pub_result = "not found"
