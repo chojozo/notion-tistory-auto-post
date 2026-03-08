@@ -177,12 +177,12 @@ def login_tistory(context, page):
 def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     """티스토리 글 작성 및 발행, 게시된 URL 반환"""
     write_url = f"https://{TISTORY_BLOG_NAME}.tistory.com/manage/post/"
-    page.goto(write_url, wait_until="domcontentloaded")
-    time.sleep(3)
+    page.goto(write_url, wait_until="networkidle")
+    time.sleep(5)
 
     # ── 제목 입력 (contenteditable placeholder)
     title_area = page.locator('[placeholder="제목을 입력하세요"]').first
-    title_area.wait_for(state="visible", timeout=15000)
+    title_area.wait_for(state="visible", timeout=30000)
     title_area.click()
     title_area.fill(title)
 
