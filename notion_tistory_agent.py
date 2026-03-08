@@ -180,6 +180,16 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     page.goto(write_url, wait_until="networkidle")
     time.sleep(5)
 
+    # ── "이전 글 이어쓰기" 팝업 처리 (draft 복구 다이얼로그)
+    try:
+        new_btn = page.locator('button:has-text("새 글"), button:has-text("새글"), button:has-text("새로 쓰기"), button:has-text("취소")')
+        if new_btn.count() > 0:
+            new_btn.first.click()
+            print("    이어쓰기 팝업 닫음")
+            time.sleep(2)
+    except Exception:
+        pass
+
     # ── 에디터 로드 대기 (#category-btn 기준)
     page.locator('#category-btn').wait_for(state="visible", timeout=30000)
 
