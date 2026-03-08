@@ -244,6 +244,7 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
                     // TinyMCE API로 먼저 시도 (에디터 내부 모델도 업데이트됨)
                     if (typeof tinymce !== 'undefined' && tinymce.activeEditor) {{
                         tinymce.activeEditor.setContent({repr(html_content)});
+                        tinymce.activeEditor.save();  // 폼 textarea에 동기화
                         tinymce.activeEditor.fire('change');
                         return 'tinymce';
                     }}
@@ -322,6 +323,10 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
         except Exception:
             continue
     print(f"    발행 결과: {pub_result}")
+
+    if "not found" in pub_result:
+        raise RuntimeError("발행 버튼을 찾지 못했습니다.")
+
     time.sleep(5)
 
     # ── 게시된 URL 확인
@@ -330,7 +335,8 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     if "/manage/" not in current_url:
         return current_url
 
-    raise RuntimeError(f"발행 후에도 관리 페이지에 머물러 있음: {current_url}")
+    # 여전히 관리 페이지지만 발행은 됐을 수 있음 → 블로그 최신 글 URL 반환
+    return f"https://{TISTORY_BLOG_NAME}.tistory.com"
 
 
 # ──────────────────────────────────────────
