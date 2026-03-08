@@ -304,13 +304,27 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     done_btn.click()
     time.sleep(3)
 
-    # ── 발행 설정 패널: 공개(open20) 선택 후 발행
-    # 공개 라디오 버튼 클릭 (value=20 = 공개, value=0 = 비공개)
-    page.locator('#open20').click()
-    time.sleep(0.5)
+    # ── 발행 설정 패널: 공개 선택 후 발행
+    try:
+        open_btn = page.locator('#open20')
+        open_btn.wait_for(state="visible", timeout=10000)
+        open_btn.click()
+        time.sleep(0.5)
+    except Exception:
+        # #open20 없으면 공개 라디오를 다른 방법으로 시도
+        try:
+            page.locator('input[type="radio"][value="20"]').click()
+            time.sleep(0.5)
+        except Exception:
+            pass  # 기본값이 공개일 수 있으므로 무시
 
-    # 발행 버튼 클릭 (#publish-btn)
-    page.locator('#publish-btn').click()
+    # 발행 버튼 클릭
+    try:
+        pub_btn = page.locator('#publish-btn')
+        pub_btn.wait_for(state="visible", timeout=10000)
+        pub_btn.click()
+    except Exception:
+        page.locator('button:has-text("발행"), button:has-text("공개발행"), button:has-text("게시")').first.click()
     time.sleep(3)
 
     # ── 게시된 URL 추출
