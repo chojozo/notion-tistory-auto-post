@@ -240,49 +240,38 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     except Exception:
         pass
 
-    # ── 본문 내용 입력
-    # 에디터가 iframe 안에 있을 수 있으므로 모든 frame 탐색
+    # ── 본문 내용 입력 (TinyMCE API 우선, 없으면 innerHTML)
     injected = False
 
-    # 방법 1: iframe 내부 탐색
     for frame in page.frames:
         try:
-            editables = frame.locator('[contenteditable="true"]')
-            count = editables.count()
-            if count == 0:
-                continue
-            target = editables.nth(1) if count >= 2 else editables.first
-            frame.evaluate(f"""
-                const els = document.querySelectorAll('[contenteditable="true"]');
-                const target = els.length >= 2 ? els[1] : els[0];
-                target.focus();
-                target.innerHTML = {repr(html_content)};
-                target.dispatchEvent(new Event('input', {{bubbles: true}}));
+            result = frame.evaluate(f"""
+                () => {{
+                    // TinyMCE API로 먼저 시도 (에디터 내부 모델도 업데이트됨)
+                    if (typeof tinymce !== 'undefined' && tinymce.activeEditor) {{
+                        tinymce.activeEditor.setContent({repr(html_content)});
+                        tinymce.activeEditor.fire('change');
+                        return 'tinymce';
+                    }}
+                    // fallback: innerHTML 직접 주입
+                    const els = document.querySelectorAll('[contenteditable="true"]');
+                    const target = els.length >= 2 ? els[1] : els[0];
+                    if (!target) return null;
+                    target.focus();
+                    target.innerHTML = {repr(html_content)};
+                    target.dispatchEvent(new Event('input', {{bubbles: true}}));
+                    target.dispatchEvent(new Event('change', {{bubbles: true}}));
+                    return 'innerHTML';
+                }}
             """)
-            injected = True
-            break
+            if result:
+                print(f"    본문 입력 방법: {result}")
+                injected = True
+                break
         except Exception:
             continue
 
-    # 방법 2: 메인 프레임 contenteditable
-    if not injected:
-        try:
-            editables = page.locator('[contenteditable="true"]')
-            count = editables.count()
-            if count > 0:
-                target = editables.nth(1) if count >= 2 else editables.first
-                target.click()
-                page.evaluate(f"""
-                    const els = document.querySelectorAll('[contenteditable="true"]');
-                    const target = els.length >= 2 ? els[1] : els[0];
-                    target.innerHTML = {repr(html_content)};
-                    target.dispatchEvent(new Event('input', {{bubbles: true}}));
-                """)
-                injected = True
-        except Exception:
-            pass
-
-    # 방법 3: textarea
+    # 방법 2: textarea
     if not injected:
         try:
             ta = page.locator('textarea')
@@ -372,6 +361,7 @@ def main():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             locale="ko-KR",
             extra_http_headers={"Accept-Language": "ko-KR,ko;q=0.9"},
+            viewport={"width": 1280, "height": 900},
         )
         page = context.new_page()
 
