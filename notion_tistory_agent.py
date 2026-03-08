@@ -180,9 +180,11 @@ def post_article(page, title: str, html_content: str, tags: list[str]) -> str:
     page.goto(write_url, wait_until="networkidle")
     time.sleep(5)
 
-    # ── 제목 입력 (contenteditable placeholder)
-    title_area = page.locator('[placeholder="제목을 입력하세요"]').first
-    title_area.wait_for(state="visible", timeout=30000)
+    # ── 에디터 로드 대기 (#category-btn 기준)
+    page.locator('#category-btn').wait_for(state="visible", timeout=30000)
+
+    # ── 제목 입력 (첫 번째 contenteditable = 제목 영역)
+    title_area = page.locator('[contenteditable="true"]').first
     title_area.click()
     title_area.fill(title)
 
