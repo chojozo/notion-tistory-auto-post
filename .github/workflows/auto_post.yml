@@ -2,8 +2,8 @@ name: Notion to Tistory Auto Post
 
 on:
   schedule:
-    # 매일 KST 11:00 = UTC 02:00
-    - cron: "0 2 * * *"
+    # 매일 KST 09:10 = UTC 00:10
+    - cron: "10 0 * * *"
   workflow_dispatch: # 수동 실행 허용
 
 jobs:
