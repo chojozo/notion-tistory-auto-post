@@ -148,8 +148,9 @@ def login_tistory(context, page):
         import json
         cookies = json.loads(cookies_json)
         context.add_cookies(cookies)
-        page.goto("https://www.tistory.com", wait_until="networkidle")
-        if "tistory.com" in page.url and "auth/login" not in page.url:
+        # 관리 페이지로 직접 접근해서 쿠키 유효성 검증
+        page.goto(f"https://{TISTORY_BLOG_NAME}.tistory.com/manage/", wait_until="networkidle")
+        if "/manage/" in page.url and "auth/login" not in page.url:
             print("  티스토리 로그인 완료 (쿠키)")
             return
         print("  쿠키 만료됨 — ID/PW 로그인으로 전환")
