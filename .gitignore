@@ -2,6 +2,7 @@
 .env
 *.env
 tistory_cookies.json
+posted_ids.json
 
 # Python
 __pycache__/

@@ -1,9 +1,24 @@
 import os
+import json
 import time
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+POSTED_IDS_FILE = os.path.join(os.path.dirname(__file__), "posted_ids.json")
+
+def load_posted_ids() -> set:
+    if os.path.exists(POSTED_IDS_FILE):
+        with open(POSTED_IDS_FILE) as f:
+            return set(json.load(f))
+    return set()
+
+def save_posted_id(page_id: str):
+    ids = load_posted_ids()
+    ids.add(page_id)
+    with open(POSTED_IDS_FILE, "w") as f:
+        json.dump(list(ids), f)
 
 load_dotenv()
 
@@ -27,7 +42,7 @@ KST = timezone(timedelta(hours=9))
 # ──────────────────────────────────────────
 
 def get_recent_notion_pages() -> list[dict]:
-    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     payload = {
         "filter": {
@@ -359,10 +374,16 @@ def main():
             browser.close()
             return
 
+        posted_ids = load_posted_ids()
+
         for article in pages:
             page_id = article["id"]
             title = extract_page_title(article)
             tags = extract_tags(article)
+
+            if page_id in posted_ids:
+                print(f"\n  건너뜀 (이미 게시됨): [{title}]")
+                continue
 
             print(f"\n  처리 중: [{title}]")
 
@@ -375,6 +396,7 @@ def main():
                     continue
 
                 post_url = post_article(page, title, html_content, tags)
+                save_posted_id(page_id)
                 print(f"    -> 게시 완료: {post_url}")
                 success += 1
 
