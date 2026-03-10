@@ -140,22 +140,8 @@ def blocks_to_html(blocks: list[dict]) -> str:
 # 티스토리 (Playwright)
 # ──────────────────────────────────────────
 
-def login_tistory(context, page):
-    """티스토리 로그인 — 쿠키 우선, 없으면 카카오 ID/PW 로그인"""
-    # ── 방법 1: 저장된 쿠키 사용 (GitHub Actions 환경)
-    cookies_json = os.environ.get("TISTORY_COOKIES", "")
-    if cookies_json:
-        import json
-        cookies = json.loads(cookies_json)
-        context.add_cookies(cookies)
-        # 관리 페이지로 직접 접근해서 쿠키 유효성 검증
-        page.goto(f"https://{TISTORY_BLOG_NAME}.tistory.com/manage/", wait_until="networkidle")
-        if "/manage/" in page.url and "auth/login" not in page.url:
-            print("  티스토리 로그인 완료 (쿠키)")
-            return
-        print("  쿠키 만료됨 — ID/PW 로그인으로 전환")
-
-    # ── 방법 2: 카카오 ID/PW 로그인 (로컬 환경)
+def login_tistory(page):
+    """티스토리 로그인 — 카카오 ID/PW"""
     page.goto("https://www.tistory.com/auth/login", wait_until="networkidle")
     page.click('a.btn_login.link_kakao_id')
     page.wait_for_load_state("networkidle")
@@ -367,7 +353,7 @@ def main():
         page = context.new_page()
 
         try:
-            login_tistory(context, page)
+            login_tistory(page)
         except Exception as e:
             print(f"  로그인 실패: {e}")
             browser.close()
